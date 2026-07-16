@@ -366,6 +366,58 @@
     font-size: 11.5px;
   }
 
+  .card-wide {
+    margin-top: 4px;
+    margin-bottom: 40px;
+  }
+
+  .data-picker {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-bottom: 24px;
+  }
+
+  .pick-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 13px 16px;
+    background: var(--bg-surface-raised);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    font-size: 14px;
+    cursor: pointer;
+    transition: border-color 0.15s ease;
+  }
+
+  .pick-row:hover {
+    border-color: var(--accent-indigo);
+  }
+
+  .pick-row input[type="checkbox"] {
+    accent-color: var(--accent-indigo);
+    width: 17px;
+    height: 17px;
+    flex-shrink: 0;
+    cursor: pointer;
+  }
+
+  .picker-actions {
+    display: flex;
+    gap: 12px;
+  }
+
+  .cta-narrow {
+    width: auto;
+    flex: 1;
+    margin-top: 0;
+  }
+
+  @media (max-width: 520px) {
+    .picker-actions { flex-direction: column; }
+  }
+
   /* ---- Footer ---- */
   footer {
     border-top: 1px solid var(--border-soft);
@@ -501,13 +553,42 @@
         </div>
       </div>
 
-      <a class="cta" href="mailto:hyath.co@gmail.com?subject=Delete%20my%20HyAth%20account&body=Please%20delete%20my%20HyAth%20account%20and%20associated%20data.%0A%0AAccount%20email%3A%0A">
+      <a class="cta" href="mailto:hyath.co@gmail.com?subject=Delete%20my%20HyAth%20account&amp;body=Please%20delete%20my%20HyAth%20account%20and%20associated%20data.%0A%0AAccount%20email%3A%0A">
         Email to request deletion →
       </a>
       <button class="cta-secondary" id="copyBtn" type="button">Copy request email instead</button>
       <p class="fallback">Nothing happen? Write to us directly at <span class="email-plain">hyath.co@gmail.com</span></p>
     </div>
 
+  </div>
+
+  <div class="card card-wide">
+    <h2>Only want some data gone?</h2>
+    <p class="card-desc">You don't have to delete your whole account. Pick what to remove and we'll take care of the rest — your login and remaining data stay intact.</p>
+
+    <div class="data-picker" id="dataPicker">
+      <label class="pick-row">
+        <input type="checkbox" value="Workout & exercise history" checked>
+        <span>Workout &amp; exercise history</span>
+      </label>
+      <label class="pick-row">
+        <input type="checkbox" value="Location & GPS history">
+        <span>Location &amp; GPS history</span>
+      </label>
+      <label class="pick-row">
+        <input type="checkbox" value="Health & profile info (age, height, weight, goals)">
+        <span>Health &amp; profile info (age, height, weight, goals)</span>
+      </label>
+      <label class="pick-row">
+        <input type="checkbox" value="Profile photo">
+        <span>Profile photo</span>
+      </label>
+    </div>
+
+    <div class="picker-actions">
+      <a class="cta cta-narrow" id="partialMailto" href="#">Email this request →</a>
+      <button class="cta-secondary cta-narrow" id="copyPartialBtn" type="button">Copy instead</button>
+    </div>
   </div>
 
   <footer>
@@ -544,6 +625,64 @@
     setTimeout(() => {
       copyBtn.textContent = 'Copy request email instead';
       copyBtn.classList.remove('copied');
+    }, 3000);
+  });
+
+  // --- Partial data deletion picker ---
+  const picker = document.getElementById('dataPicker');
+  const partialLink = document.getElementById('partialMailto');
+  const copyPartialBtn = document.getElementById('copyPartialBtn');
+
+  function getSelectedItems() {
+    const boxes = picker.querySelectorAll('input[type="checkbox"]:checked');
+    return Array.from(boxes).map(b => b.value);
+  }
+
+  function buildPartialBody() {
+    const items = getSelectedItems();
+    const list = items.length
+      ? items.map(i => `- ${i}`).join('\n')
+      : '(select at least one item above)';
+    return `Please delete the following data from my HyAth account, but keep my account active:\n\n${list}\n\nAccount email: `;
+  }
+
+  function refreshPartialLink() {
+    const subject = 'Delete specific HyAth data';
+    const body = buildPartialBody();
+    const items = getSelectedItems();
+    partialLink.href = `mailto:${emailText}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+    partialLink.style.opacity = items.length ? '1' : '0.5';
+    partialLink.style.pointerEvents = items.length ? 'auto' : 'none';
+  }
+
+  picker.addEventListener('change', refreshPartialLink);
+  refreshPartialLink();
+
+  copyPartialBtn.addEventListener('click', async () => {
+    const items = getSelectedItems();
+    if (!items.length) {
+      copyPartialBtn.textContent = 'Select at least one item first';
+      setTimeout(() => { copyPartialBtn.textContent = 'Copy instead'; }, 2200);
+      return;
+    }
+    const fullText = `To: ${emailText}\nSubject: Delete specific HyAth data\n\n${buildPartialBody()}`;
+    try {
+      await navigator.clipboard.writeText(fullText);
+    } catch (err) {
+      const textarea = document.createElement('textarea');
+      textarea.value = fullText;
+      textarea.style.position = 'fixed';
+      textarea.style.opacity = '0';
+      document.body.appendChild(textarea);
+      textarea.select();
+      document.execCommand('copy');
+      document.body.removeChild(textarea);
+    }
+    copyPartialBtn.textContent = 'Copied — paste into any email app';
+    copyPartialBtn.classList.add('copied');
+    setTimeout(() => {
+      copyPartialBtn.textContent = 'Copy instead';
+      copyPartialBtn.classList.remove('copied');
     }, 3000);
   });
 </script>
